@@ -68,7 +68,7 @@ nav ul{display:flex;gap:22px;list-style:none;margin:0;padding:0}nav a{text-decor
 footer{padding:36px 0;border-top:1px solid var(--line);color:var(--mute);font-size:.9rem}
 dialog{border:1px solid var(--line);border-radius:18px;background:var(--card);color:var(--ink);width:min(560px,92vw)}
 dialog textarea{width:100%;height:260px;font:.8rem monospace;background:var(--surf);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px}
-select{font:inherit;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);min-height:44px}
+input.k{flex:1;min-width:200px}select,input.k{font:inherit;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);min-height:44px}
 [hidden]{display:none!important}
 @media (max-width:820px){.hero .wrap,.res,.g2,.g3{grid-template-columns:1fr}.burger{display:inline-flex}
 nav{position:absolute;left:0;right:0;top:62px;background:var(--bg);border-bottom:1px solid var(--line);display:none;padding:12px 20px}nav.open{display:block}nav ul{flex-direction:column;gap:6px}nav a{display:block;padding:10px 0}section{padding:52px 0}}
@@ -103,6 +103,8 @@ nav{position:absolute;left:0;right:0;top:62px;background:var(--bg);border-bottom
 <h2>Detect electronic waste</h2>
 <p>Choose a photo or point your camera at the item. Results include how to dispose of it.</p>
 <div id="engineMsg" class="msg info" hidden></div>
+<div class="card" style="margin-bottom:8px"><h3>Gemini API key (optional)</h3><p>Paste a free key from aistudio.google.com to also detect batteries, cables and circuit boards. It stays in this browser tab and is sent only to Google. Never share a page with your key typed into it.</p>
+<div class="row" style="margin-top:0"><input class="k" id="gkey" type="password" autocomplete="off" aria-label="Gemini API key" placeholder="Paste your key"><button class="btn p" id="gSave">Use key</button><button class="btn" id="gClear" hidden>Remove key</button></div><div id="gMsg" class="msg err" role="alert" hidden></div></div>
 <div class="tabs" role="tablist" aria-label="Detection mode">
 <button role="tab" id="tabU" aria-selected="true" aria-controls="panU"><i data-lucide="image" class="ic"></i>Upload image</button>
 <button role="tab" id="tabL" aria-selected="false" aria-controls="panL"><i data-lucide="video" class="ic"></i>Live camera</button></div>
@@ -168,8 +170,8 @@ nav{position:absolute;left:0;right:0;top:62px;background:var(--bg);border-bottom
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
 <script>
-// Optional: set to your backend URL (POST multipart "image" -> {detections:[{label,score,box:[x,y,w,h]}]}). Keep API keys on that server.
-const API_URL = "";
+let GKEY = ""; try { GKEY = sessionStorage.getItem("gk") || ""; } catch (e) {}
+const GMODEL = "gemini-2.5-flash"; // change if Google retires this name
 const $ = s => document.querySelector(s);
 const icons = () => { try { window.lucide && lucide.createIcons(); } catch (e) {} };
 const INFO = {
@@ -188,7 +190,7 @@ let model = null, mode = "demo", curImg = null, hist = [], last = null, stream =
 // ---- engine setup
 async function initEngine() {
  const chip = $("#modeChip"), ex = $("#engineExplain"), em = $("#engineMsg");
- if (API_URL) { mode = "api"; chip.className = "chip ok"; chip.textContent = "Detection via your API"; ex.textContent = "Images are sent to your configured backend API for detection."; return; }
+ if (GKEY) { setApiUi(); return; }
  try {
   if (!window.cocoSsd) throw 0;
   model = await Promise.race([cocoSsd.load({base:"lite_mobilenet_v2"}), new Promise((_, r) => setTimeout(r, 20000))]);
@@ -197,7 +199,7 @@ async function initEngine() {
  } catch (e) {
   mode = "demo"; chip.className = "chip demo"; chip.textContent = "Demo mode: no AI model loaded";
   em.hidden = false; em.textContent = "Demo mode. No AI model could be loaded here, so nothing is being detected. You choose the item type and see the disposal report for it. Confidence is not shown because no real analysis happens.";
-  ex.textContent = "No AI model is connected right now, so the site runs in demo mode. To enable real detection, set API_URL in the script to a backend that wraps a trained e-waste model, or host the page where the COCO-SSD model files can load.";
+  ex.textContent = "No AI model is connected right now, so the site runs in demo mode. To enable real detection, paste a free Gemini key above, or host the page where the COCO-SSD model files can load.";
  }
  icons();
 }
@@ -208,13 +210,12 @@ function ts() { return new Date().toLocaleTimeString([], {hour:"2-digit", minute
 function boxes(ctx, dets, sc) {
  ctx.lineWidth = Math.max(3, 3 * sc); ctx.font = "700 " + Math.max(14, 15 * sc) + "px DM Sans, sans-serif";
  dets.forEach(d => { const [x, y, w, h] = d.bbox; ctx.strokeStyle = "#e8772e"; ctx.strokeRect(x, y, w, h);
-  const t = d.label + " " + Math.round(d.score * 100) + "%", tw = ctx.measureText(t).width + 10, th = 24 * sc;
+  const t = d.label + (d.score == null ? "" : " " + Math.round(d.score * 100) + "%"), tw = ctx.measureText(t).width + 10, th = 24 * sc;
   ctx.fillStyle = "#e8772e"; ctx.fillRect(x, Math.max(0, y - th), tw, th); ctx.fillStyle = "#1a0d02"; ctx.fillText(t, x + 5, Math.max(th - 7 * sc, y - 7 * sc)); });
 }
-async function detectSource(src, blob) {
+async function detectSource(src, blob, w, h) {
  if (mode === "local") { const r = await model.detect(src, 8, 0.4); return r.filter(r => classify(r.class)).map(r => ({label: classify(r.class)[1], cat: classify(r.class)[0], score: r.score, bbox: r.bbox})); }
- if (mode === "api") { const fd = new FormData(); fd.append("image", blob); const res = await fetch(API_URL, {method:"POST", body: fd}); if (!res.ok) throw new Error("API " + res.status);
-  const j = await res.json(); return (j.detections || []).map(d => ({label: d.label, cat: d.category || "other", score: d.score, bbox: d.box || [0,0,0,0]})); }
+ if (mode === "api") return gemini(src, w, h);
  return null;
 }
 
@@ -248,11 +249,11 @@ $("#detectBtn").onclick = async () => {
  $("#load").classList.add("on"); $("#detectBtn").disabled = true; uErr("");
  try {
   if (!img.complete) await img.decode();
-  const dets = await detectSource(img, curImg);
+  const dets = await detectSource(img, curImg, img.naturalWidth, img.naturalHeight);
   const c = document.createElement("canvas"); c.width = img.naturalWidth; c.height = img.naturalHeight; const x = c.getContext("2d"); x.drawImage(img, 0, 0);
   if (dets) boxes(x, dets, c.width / 700);
   show(dets, c, "upload");
- } catch (e) { uErr("Detection failed. Try another image or try again in a moment."); }
+ } catch (e) { uErr(e && e.gem ? e.message : "Detection failed. Try another image or try again in a moment."); }
  $("#load").classList.remove("on"); $("#detectBtn").disabled = false;
 };
 
@@ -265,7 +266,7 @@ $("#startCam").onclick = async () => {
   stream = await navigator.mediaDevices.getUserMedia({video: {facingMode: {ideal: "environment"}, width: {ideal: 1280}}, audio: false});
   const v = $("#vid"); v.srcObject = stream; await v.play();
   $("#liveBox").classList.add("on"); $("#liveEmpty").hidden = true; $("#startCam").disabled = true; $("#capBtn").disabled = false; $("#stopCam").disabled = false;
-  if (mode !== "local") lErr("Live boxes need the local AI model, which isn't available. You can still capture a frame" + (mode === "demo" ? " and preview a demo report." : "."));
+  if (mode === "api") lErr("Live view doesn't draw boxes. Press Capture Image to send the current frame to Gemini."); else if (mode !== "local") lErr("Live boxes need the local AI model, which isn't available. You can still capture a frame" + (mode === "demo" ? " and preview a demo report." : "."));
   loop();
  } catch (e) {
   const n = e && e.name;
@@ -287,9 +288,9 @@ async function loop() {
 }
 function stopCam() { if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; } $("#liveBox").classList.remove("on"); $("#liveEmpty").hidden = false; $("#startCam").disabled = false; $("#capBtn").disabled = true; $("#stopCam").disabled = true; $("#liveList").textContent = ""; liveDets = []; }
 $("#stopCam").onclick = stopCam;
-$("#capBtn").onclick = () => {
+$("#capBtn").onclick = async () => {
  const v = $("#vid"), c = document.createElement("canvas"); c.width = v.videoWidth; c.height = v.videoHeight; const x = c.getContext("2d"); x.drawImage(v, 0, 0);
- const d = mode === "demo" ? null : liveDets.slice(); if (d) boxes(x, d, c.width / 700); show(d, c, "live");
+ let d = null; try { if (mode === "api") { $("#capBtn").disabled = true; const b = await new Promise(r => c.toBlob(r, "image/jpeg", .85)); d = await detectSource(c, b, c.width, c.height); } else if (mode === "local") d = liveDets.slice(); } catch (e) { lErr(e && e.gem ? e.message : "Analysis failed. Try capturing again."); $("#capBtn").disabled = !stream; return; } $("#capBtn").disabled = !stream; if (d) boxes(x, d, c.width / 700); show(d, c, "live");
 };
 
 // ---- results
@@ -304,7 +305,7 @@ function show(dets, canvas, source) {
   box.innerHTML = '<span class="chip">No match</span><h3 style="margin-top:12px">No electronic items recognised</h3><p>Try a closer, well-lit photo with the item filling most of the frame.' + (mode === "local" ? " The local model can't identify batteries, cables or circuit boards." : "") + '</p>'; last = null;
  } else {
   const t = dets.slice().sort((a, b) => b.score - a.score)[0];
-  box.innerHTML = report(t.label, t.cat, t.score, "Detected") + (dets.length > 1 ? '<p style="margin-top:12px;color:var(--mute)">Also found: ' + dets.filter(d => d !== t).map(d => d.label + " (" + Math.round(d.score * 100) + "%)").join(", ") + '</p>' : "");
+  box.innerHTML = report(t.label, t.cat, t.score, "Detected") + (dets.length > 1 ? '<p style="margin-top:12px;color:var(--mute)">Also found: ' + dets.filter(d => d !== t).map(d => d.label + (d.score == null ? "" : " (" + Math.round(d.score * 100) + "%)")).join(", ") + '</p>' : "");
   last = rec(t.label, t.cat, t.score, mode, rc);
  }
  if (last && dets !== null) addHist(last); else if (last) addHist(last, true);
@@ -312,7 +313,7 @@ function show(dets, canvas, source) {
 }
 function report(name, cat, score, status) {
  const i = INFO[cat] || INFO.other, p = score == null ? "" : Math.round(score * 1000) / 10;
- return '<dl class="kv"><dt>Detected item</dt><dd>' + name + '</dd><dt>Category</dt><dd>' + i.n + '</dd><dt>Status</dt><dd>' + status + '</dd><dt>Confidence</dt><dd>' + (score == null ? "Not available in demo mode" : p + "%") + '</dd></dl>' +
+ return '<dl class="kv"><dt>Detected item</dt><dd>' + name + '</dd><dt>Category</dt><dd>' + i.n + '</dd><dt>Status</dt><dd>' + status + '</dd><dt>Confidence</dt><dd>' + (score == null ? (mode === "api" ? "Not provided by Gemini" : "Not available in demo mode") : p + "%") + '</dd></dl>' +
   (score == null ? "" : '<div class="bar2" style="margin:12px 0" role="img" aria-label="Confidence ' + p + ' percent"><i style="width:' + p + '%"></i></div>') +
   '<h3 style="margin-top:18px">Recommended disposal</h3><p>' + i.how + '</p><h3>Recycling possibility</h3><p>' + i.rec + '</p><h3>Environmental impact</h3><p>' + i.imp + '</p>';
 }
@@ -330,6 +331,47 @@ $("#exportBtn").onclick = () => { $("#expTxt").value = exportData(); $("#dlg").s
 $("#closeDlg").onclick = () => $("#dlg").close();
 $("#copyBtn").onclick = async () => { try { await navigator.clipboard.writeText($("#expTxt").value); $("#copyBtn").textContent = "Copied"; } catch (e) { $("#expTxt").select(); $("#copyBtn").textContent = "Press Ctrl+C to copy"; } };
 $("#resetBtn").onclick = () => { $("#results").hidden = true; last = null; clearFile(); stopCam(); hist = []; renderHist(); $("#detect").scrollIntoView({behavior: "smooth"}); };
+
+
+// ---- Gemini (direct from the browser, using the key the visitor pastes)
+const GCATS = ["phone","battery","laptop","computer","cable","board","printer","appliance","other"];
+const GPROMPT = "Find every piece of electronic waste or electronic device visible in this image. For each item return: label (short plain name, e.g. Smartphone), category (one of: " + GCATS.join(", ") + "), and box_2d as [ymin, xmin, ymax, xmax] with values from 0 to 1000. If there are no electronic items, return an empty array.";
+const GSCHEMA = {type:"ARRAY",items:{type:"OBJECT",properties:{label:{type:"STRING"},category:{type:"STRING",enum:GCATS},box_2d:{type:"ARRAY",items:{type:"INTEGER"}}},required:["label","category","box_2d"]}};
+function gerr(m) { const e = new Error(m); e.gem = true; return e; }
+async function gemini(src, w, h) {
+ const k = Math.min(1, 1280 / Math.max(w, h)), c = document.createElement("canvas"); c.width = Math.round(w * k); c.height = Math.round(h * k);
+ c.getContext("2d").drawImage(src, 0, 0, c.width, c.height);
+ const data = c.toDataURL("image/jpeg", .85).split(",")[1];
+ let res;
+ try {
+  res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + GMODEL + ":generateContent", {method:"POST", headers:{"Content-Type":"application/json","x-goog-api-key":GKEY},
+   body: JSON.stringify({contents:[{parts:[{inline_data:{mime_type:"image/jpeg",data}},{text:GPROMPT}]}], generationConfig:{temperature:.1,responseMimeType:"application/json",responseSchema:GSCHEMA}})});
+ } catch (e) { throw gerr("Couldn't reach Google. Check your connection, and that this page isn't blocked from calling other sites."); }
+ if (res.status === 400 || res.status === 403) throw gerr("Google rejected the key. Check it, or remove it and paste it again.");
+ if (res.status === 429) throw gerr("Free quota reached. Wait a minute and try again.");
+ if (!res.ok) throw gerr("Gemini request failed (" + res.status + ").");
+ let items; try { items = JSON.parse((await res.json()).candidates[0].content.parts[0].text); } catch (e) { throw gerr("Couldn't read Gemini's answer. Try again."); }
+ return (Array.isArray(items) ? items : []).filter(i => Array.isArray(i.box_2d) && i.box_2d.length === 4).slice(0, 10).map(i => {
+  const [y0, x0, y1, x1] = i.box_2d.map(v => Math.min(1000, Math.max(0, v)) / 1000);
+  return {label: String(i.label).slice(0, 60), cat: INFO[i.category] ? i.category : "other", score: null, bbox: [x0 * w, y0 * h, (x1 - x0) * w, (y1 - y0) * h]};
+ });
+}
+function setApiUi() {
+ mode = "api"; $("#modeChip").className = "chip ok"; $("#modeChip").textContent = "Gemini API: images are sent to Google"; $("#engineMsg").hidden = true;
+ $("#engineExplain").textContent = "Detection uses Google Gemini with the key you pasted. Each analysed image is sent to Google, so avoid photos with personal information. Gemini gives no confidence score, so none is shown.";
+ $("#gClear").hidden = false;
+}
+function restoreMode() {
+ $("#gClear").hidden = true;
+ if (model) { mode = "local"; $("#modeChip").className = "chip ok"; $("#modeChip").textContent = "Local AI: COCO-SSD in your browser"; $("#engineExplain").textContent = "Detection runs locally in your browser. Images are not uploaded."; }
+ else { mode = "demo"; $("#modeChip").className = "chip demo"; $("#modeChip").textContent = "Demo mode: no AI model loaded"; $("#engineMsg").hidden = false; $("#engineMsg").textContent = "Demo mode. Nothing is detected: you choose the item type to preview its disposal report."; $("#engineExplain").textContent = "No AI model is connected. Paste a free Gemini key above to enable detection."; }
+}
+$("#gSave").onclick = () => {
+ const k = $("#gkey").value.trim(), m = $("#gMsg");
+ if (!/^AIza[0-9A-Za-z_-]{30,}$/.test(k)) { m.hidden = false; m.textContent = "That doesn't look like a Gemini key. Keys start with AIza."; return; }
+ m.hidden = true; GKEY = k; $("#gkey").value = ""; try { sessionStorage.setItem("gk", k); } catch (e) {} setApiUi();
+};
+$("#gClear").onclick = () => { GKEY = ""; try { sessionStorage.removeItem("gk"); } catch (e) {} $("#gkey").value = ""; restoreMode(); };
 
 icons(); renderHist(); initEngine();
 </script>
