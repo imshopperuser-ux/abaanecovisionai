@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Smart E-Waste Detection</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fff;--surf:#f1f6f2;--card:#fff;--ink:#12201a;--mute:#52665b;--green:#0f3d2e;--green2:#1d6b4f;--orange:#e8772e;--line:#d9e4dc;--onG:#fff;--sh:0 6px 24px rgba(15,61,46,.08);
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0b1612;--surf:#102019;--card:#14271f;--ink:#e8f1ec;--mute:#9bb2a6;--green:#7fd3ad;--green2:#4fb88c;--line:#244236;--onG:#0b1612;--sh:0 6px 24px rgba(0,0,0,.35)}}
+:root[data-theme="dark"]{--bg:#0b1612;--surf:#102019;--card:#14271f;--ink:#e8f1ec;--mute:#9bb2a6;--green:#7fd3ad;--green2:#4fb88c;--line:#244236;--onG:#0b1612;--sh:0 6px 24px rgba(0,0,0,.35)}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:calc(env(safe-area-inset-top,0px) + 70px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 1rem/1.6 "DM Sans",system-ui,sans-serif}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:60}
+h1,h2,h3{font-family:"Bricolage Grotesque","DM Sans",sans-serif;line-height:1.1;margin:0 0 .5em;letter-spacing:-.02em}
+h1{font-size:clamp(2.4rem,6vw,4.4rem);font-weight:800}h2{font-size:clamp(1.7rem,3.5vw,2.5rem);font-weight:700}h3{font-size:1.15rem}
+p{margin:0 0 1em;max-width:62ch}a{color:inherit}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+section{padding:72px 0}.alt{background:var(--surf)}
+:focus-visible{outline:3px solid var(--orange);outline-offset:2px;border-radius:6px}
+.skip{position:absolute;left:-999px}.skip:focus{left:10px;top:10px;background:var(--orange);color:#000;padding:8px 12px;z-index:99}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.bar{display:flex;align-items:center;justify-content:space-between;height:62px}
+.logo{display:flex;gap:8px;align-items:center;font:800 1.1rem "Bricolage Grotesque",sans-serif;text-decoration:none;color:var(--green)}
+nav ul{display:flex;gap:22px;list-style:none;margin:0;padding:0}nav a{text-decoration:none;color:var(--mute);font-weight:500}nav a:hover{color:var(--green)}
+.burger{display:none}
+.btn{display:inline-flex;align-items:center;gap:8px;border:2px solid var(--green);background:transparent;color:var(--green);font:700 .95rem "DM Sans",sans-serif;padding:11px 20px;border-radius:12px;cursor:pointer;text-decoration:none;min-height:44px}
+.btn.p{background:var(--green);color:var(--onG)}.btn.o{background:var(--orange);border-color:var(--orange);color:#1a0d02}
+.btn:hover{transform:translateY(-1px)}.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}.btn.sm{padding:7px 12px;min-height:36px;font-size:.85rem}
+.ic{width:18px;height:18px;flex:none}
+.hero{padding:56px 0 72px}.hero .wrap{display:grid;grid-template-columns:1.15fr .85fr;gap:40px;align-items:center}
+.hero .sub{font-size:1.2rem;color:var(--mute)}.cta{display:flex;flex-wrap:wrap;gap:12px;margin:24px 0}
+.scan{background:var(--green);border-radius:28px;padding:20px;box-shadow:var(--sh);position:relative;overflow:hidden}
+.scan svg{width:100%;height:auto;display:block}
+.sweep{animation:sw 3.2s ease-in-out infinite}@keyframes sw{0%,100%{transform:translateY(0)}50%{transform:translateY(230px)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto}}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:.85rem;font-weight:700;padding:5px 12px;border-radius:99px;border:1px solid var(--line);background:var(--card)}
+.chip.ok{border-color:var(--green2);color:var(--green)}.chip.demo{border-color:var(--orange);color:var(--orange)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:24px;box-shadow:var(--sh)}
+.tabs{display:inline-flex;background:var(--surf);border-radius:14px;padding:4px;margin:16px 0}
+.tabs button{border:0;background:none;color:var(--mute);font:700 .95rem "DM Sans",sans-serif;padding:10px 18px;border-radius:10px;cursor:pointer;display:flex;gap:8px;align-items:center;min-height:44px}
+.tabs button[aria-selected=true]{background:var(--green);color:var(--onG)}
+.drop{border:2px dashed var(--green2);border-radius:18px;padding:40px 20px;text-align:center;background:var(--surf);cursor:pointer}
+.drop.over{background:color-mix(in srgb,var(--orange) 14%,var(--surf));border-color:var(--orange)}
+.drop p{margin:6px auto;color:var(--mute)}
+.row{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.prev{position:relative}.prev img,.prev canvas{width:100%;max-height:420px;object-fit:contain;border-radius:14px;background:#000;display:block}
+.live{position:relative;border-radius:16px;overflow:hidden;background:#000;aspect-ratio:4/3;display:none}
+.live.on{display:block}.live video,.live canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.msg{padding:12px 14px;border-radius:12px;font-size:.95rem;margin-top:14px}
+.msg.err{background:color-mix(in srgb,#c0392b 14%,var(--card));border:1px solid #c0392b}
+.msg.info{background:color-mix(in srgb,var(--orange) 13%,var(--card));border:1px solid var(--orange)}
+.spin{width:22px;height:22px;border:3px solid var(--line);border-top-color:var(--orange);border-radius:50%;animation:r .8s linear infinite}@keyframes r{to{transform:rotate(360deg)}}
+.load{display:none;align-items:center;gap:12px;margin-top:14px;font-weight:500}.load.on{display:flex}
+.grid{display:grid;gap:18px}.g3{grid-template-columns:repeat(3,1fr)}.g2{grid-template-columns:1fr 1fr}
+.res{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:28px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;margin:0}.kv dt{color:var(--mute)}.kv dd{margin:0;font-weight:700}
+.bar2{height:10px;background:var(--line);border-radius:9px;overflow:hidden}.bar2 i{display:block;height:100%;background:var(--orange)}
+.big{font:800 2.6rem "Bricolage Grotesque",sans-serif;color:var(--green);line-height:1}
+.hist{display:flex;flex-direction:column;gap:10px;margin:0;padding:0;list-style:none}
+.hist li{display:flex;gap:12px;align-items:center;border:1px solid var(--line);border-radius:14px;padding:10px;background:var(--card)}
+.hist img{width:56px;height:56px;object-fit:cover;border-radius:10px}.hist small{color:var(--mute)}
+.empty{color:var(--mute);text-align:center;padding:24px;border:1px dashed var(--line);border-radius:14px}
+.tips li{margin-bottom:10px}.tips{padding-left:20px;margin:0}
+footer{padding:36px 0;border-top:1px solid var(--line);color:var(--mute);font-size:.9rem}
+dialog{border:1px solid var(--line);border-radius:18px;background:var(--card);color:var(--ink);width:min(560px,92vw)}
+dialog textarea{width:100%;height:260px;font:.8rem monospace;background:var(--surf);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px}
+select{font:inherit;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);min-height:44px}
+[hidden]{display:none!important}
+@media (max-width:820px){.hero .wrap,.res,.g2,.g3{grid-template-columns:1fr}.burger{display:inline-flex}
+nav{position:absolute;left:0;right:0;top:62px;background:var(--bg);border-bottom:1px solid var(--line);display:none;padding:12px 20px}nav.open{display:block}nav ul{flex-direction:column;gap:6px}nav a{display:block;padding:10px 0}section{padding:52px 0}}
+</style>
+</head>
+<body>
+<a class="skip" href="#detect">Skip to detection</a>
+<header><div class="wrap bar">
+<a class="logo" href="#top"><i data-lucide="recycle" class="ic"></i>EcoScan</a>
+<nav id="nav" aria-label="Main"><ul><li><a href="#detect">Detect</a></li><li><a href="#history">History</a></li><li><a href="#impact">Why it matters</a></li><li><a href="#tips">Tips</a></li></ul></nav>
+<button class="btn sm burger" id="burger" aria-expanded="false" aria-controls="nav" aria-label="Open menu"><i data-lucide="menu" class="ic"></i></button>
+</div></header>
+
+<main id="top">
+<section class="hero"><div class="wrap">
+<div>
+<h1>Smart E-Waste Detection</h1>
+<p class="sub">Identify electronic waste instantly using AI-powered image recognition and live camera detection.</p>
+<p>Old phones, batteries and cables contain metals worth recovering and chemicals that should never reach landfill. Know what you have, then send it to the right place.</p>
+<div class="cta"><a class="btn o" href="#detect" data-go="upload"><i data-lucide="upload" class="ic"></i>Upload &amp; Detect Waste</a><a class="btn p" href="#detect" data-go="live"><i data-lucide="camera" class="ic"></i>Start Live Detection</a></div>
+<span id="modeChip" class="chip" role="status"><i data-lucide="loader" class="ic"></i>Checking AI model…</span>
+</div>
+<div class="scan" aria-hidden="true">
+<svg viewBox="0 0 400 340"><rect x="130" y="40" width="140" height="250" rx="22" fill="none" stroke="#fff" stroke-width="5" opacity=".9"/><rect x="146" y="64" width="108" height="170" rx="8" fill="#fff" opacity=".12"/><circle cx="200" cy="262" r="10" fill="none" stroke="#fff" stroke-width="3"/>
+<g stroke="#e8772e" stroke-width="6" fill="none" stroke-linecap="round"><path d="M100 80V50h30M300 80V50h-30M100 260v30h30M300 260v30h-30"/></g>
+<g class="sweep"><rect x="104" y="52" width="192" height="4" fill="#e8772e"/></g>
+<rect x="296" y="120" width="86" height="26" rx="13" fill="#e8772e"/><text x="339" y="138" text-anchor="middle" font-size="13" font-weight="700" fill="#1a0d02" font-family="DM Sans,sans-serif">Smartphone</text>
+<g stroke="#fff" opacity=".6" stroke-width="2" fill="none"><path d="M30 300h60l12-26 14 40 10-20h40"/><circle cx="52" cy="60" r="18"/><path d="M52 48v24M40 60h24"/></g></svg>
+</div></div></section>
+
+<section id="detect" class="alt"><div class="wrap">
+<h2>Detect electronic waste</h2>
+<p>Choose a photo or point your camera at the item. Results include how to dispose of it.</p>
+<div id="engineMsg" class="msg info" hidden></div>
+<div class="tabs" role="tablist" aria-label="Detection mode">
+<button role="tab" id="tabU" aria-selected="true" aria-controls="panU"><i data-lucide="image" class="ic"></i>Upload image</button>
+<button role="tab" id="tabL" aria-selected="false" aria-controls="panL"><i data-lucide="video" class="ic"></i>Live camera</button></div>
+
+<div class="card" id="panU" role="tabpanel" aria-labelledby="tabU">
+<div class="drop" id="drop" tabindex="0" role="button" aria-label="Choose an image or drop it here">
+<i data-lucide="image-plus" class="ic" style="width:40px;height:40px"></i>
+<p><b>Drag and drop an image here</b></p><p>or</p>
+<button class="btn p" id="browse" type="button">Browse files</button><p style="font-size:.85rem">JPG, JPEG, PNG or WEBP, up to 10 MB</p></div>
+<input type="file" id="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" hidden>
+<div class="prev" id="prev" hidden><img id="prevImg" alt="Uploaded item preview"></div>
+<div class="row" id="uRow" hidden><button class="btn o" id="detectBtn"><i data-lucide="scan-search" class="ic"></i>Detect Waste</button><button class="btn" id="replaceBtn">Replace image</button><button class="btn" id="removeBtn"><i data-lucide="trash-2" class="ic"></i>Remove</button></div>
+<div class="load" id="load" role="status"><span class="spin"></span><span>Analyzing image…</span></div>
+<div id="uErr" class="msg err" role="alert" hidden></div>
+</div>
+
+<div class="card" id="panL" role="tabpanel" aria-labelledby="tabL" hidden>
+<div class="live" id="liveBox"><video id="vid" playsinline muted></video><canvas id="ov"></canvas></div>
+<div id="liveEmpty" class="empty">The camera is off. Select Start Camera and allow access when your browser asks.</div>
+<div class="row"><button class="btn o" id="startCam"><i data-lucide="camera" class="ic"></i>Start Camera</button><button class="btn p" id="capBtn" disabled><i data-lucide="aperture" class="ic"></i>Capture Image</button><button class="btn" id="stopCam" disabled><i data-lucide="video-off" class="ic"></i>Stop Camera</button></div>
+<p id="liveList" style="margin-top:14px" aria-live="polite"></p>
+<div id="lErr" class="msg err" role="alert" hidden></div>
+</div>
+
+<div id="results" hidden>
+<div class="res">
+<div class="card"><h3>Detected image</h3><div class="prev"><canvas id="resCanvas"></canvas></div></div>
+<div class="card" id="resInfo"></div>
+</div>
+<div class="row"><button class="btn" id="exportBtn"><i data-lucide="download" class="ic"></i>Export results</button><button class="btn" id="resetBtn"><i data-lucide="rotate-ccw" class="ic"></i>Reset detection</button></div>
+</div>
+</div></section>
+
+<section id="history"><div class="wrap">
+<h2>Session history</h2><p>Detections from this visit only. Nothing is saved after you close the page.</p>
+<ul class="hist" id="histList"></ul><div class="empty" id="histEmpty">No detections yet. Upload an image or start the camera.</div>
+</div></section>
+
+<section id="impact" class="alt"><div class="wrap">
+<h2>Why e-waste matters</h2>
+<p>Electronics are the fastest-growing household waste stream. Source: UN Global E-waste Monitor 2024.</p>
+<div class="grid g3">
+<div class="card"><div class="big">62 Mt</div><p>of e-waste generated worldwide in 2022, about 7.8 kg for every person.</p></div>
+<div class="card"><div class="big">22.3%</div><p>was documented as properly collected and recycled. The rest was lost, burned or landfilled.</p></div>
+<div class="card"><div class="big">82 Mt</div><p>projected for 2030 if recycling does not keep pace with consumption.</p></div></div>
+<div class="grid g3" style="margin-top:18px">
+<div class="card"><h3><i data-lucide="flask-conical" class="ic"></i> Toxic materials</h3><p>Lead, mercury and cadmium leach into soil and water when devices are dumped.</p></div>
+<div class="card"><h3><i data-lucide="gem" class="ic"></i> Recoverable value</h3><p>Phones and boards hold copper, gold, silver and cobalt that can be mined again from scrap.</p></div>
+<div class="card"><h3><i data-lucide="flame" class="ic"></i> Fire risk</h3><p>Damaged lithium batteries can ignite in bins and trucks. Keep them out of household trash.</p></div></div>
+</div></section>
+
+<section id="tips"><div class="wrap grid g2">
+<div><h2>Recycling tips</h2>
+<ol class="tips"><li>Back up and factory-reset phones and laptops before handing them over.</li><li>Tape the terminals of loose batteries and store them in a dry place.</li><li>Ask the maker or retailer about take-back programs first.</li><li>Use only authorized recyclers that can show certification.</li><li>Repair or donate working devices before recycling them.</li></ol></div>
+<div class="card"><h3>How detection runs</h3><p id="engineExplain">Checking which detection engine is available…</p></div>
+</div></section>
+</main>
+<footer><div class="wrap">Disposal guidance is general. Check your local rules for e-waste collection.</div></footer>
+
+<dialog id="dlg"><h3>Export results</h3><textarea id="expTxt" readonly aria-label="Detection results as JSON"></textarea><div class="row"><button class="btn p" id="copyBtn">Copy to clipboard</button><button class="btn" id="closeDlg">Close</button></div></dialog>
+
+<script src="https://cdn.jsdelivr.net/npm/lucide@0.453.0/dist/umd/lucide.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
+<script>
+// Optional: set to your backend URL (POST multipart "image" -> {detections:[{label,score,box:[x,y,w,h]}]}). Keep API keys on that server.
+const API_URL = "";
+const $ = s => document.querySelector(s);
+const icons = () => { try { window.lucide && lucide.createIcons(); } catch (e) {} };
+const INFO = {
+ phone:{n:"Mobile Phones",how:"Wipe your data, remove the SIM and take it to an authorized e-waste collection or recycling center.",rec:"Yes. Up to 90% of materials can be recovered.",imp:"Contains cobalt, copper and gold. Landfilling wastes them and can leak heavy metals."},
+ battery:{n:"Batteries",how:"Tape the terminals and drop at a battery take-back point. Never put in household trash.",rec:"Yes. Lithium and lead are recoverable.",imp:"Fire hazard and a source of toxic leachate."},
+ laptop:{n:"Laptops",how:"Back up, wipe the drive and use a manufacturer take-back or certified recycler. Donate if it still works.",rec:"Yes. Metals, plastics and the battery are recyclable.",imp:"Holds lead solder and flame retardants."},
+ computer:{n:"Computers",how:"Wipe storage and send to a certified recycler or refurbisher.",rec:"Yes. Metals and boards have high recovery value.",imp:"Monitors and boards can contain lead and mercury."},
+ cable:{n:"Chargers and Cables",how:"Bundle and hand over at an e-waste drop-off. Do not burn the plastic to get at the copper.",rec:"Yes. Copper is highly recyclable.",imp:"Burning cable coating releases toxic fumes."},
+ board:{n:"Circuit Boards",how:"Send to a specialist recycler. Boards are the most valuable e-waste fraction.",rec:"Yes. Contains gold, silver and copper.",imp:"Improper smelting releases lead and dioxins."},
+ printer:{n:"Printers",how:"Remove cartridges for separate return, then take the unit to e-waste collection.",rec:"Partly. Metal and plastic parts are recyclable.",imp:"Toner and ink residues need controlled handling."},
+ appliance:{n:"Electronic Appliances",how:"Use retailer take-back or municipal bulky-waste collection. Fridges need refrigerant recovery.",rec:"Yes. Steel, copper and aluminum are recoverable.",imp:"Older units contain refrigerants and oils that harm air and soil."},
+ other:{n:"Other Electronic Waste",how:"Take to the nearest authorized e-waste collection point.",rec:"Usually. Ask the collector.",imp:"Mixed materials need proper sorting."}};
+const MAP = {"cell phone":["phone","Smartphone"],laptop:["laptop","Laptop"],keyboard:["computer","Keyboard"],mouse:["computer","Computer mouse"],tv:["appliance","Television / monitor"],remote:["other","Remote control"],microwave:["appliance","Microwave"],oven:["appliance","Oven"],toaster:["appliance","Toaster"],refrigerator:["appliance","Refrigerator"],"hair drier":["appliance","Hair dryer"],clock:["other","Clock"]};
+let model = null, mode = "demo", curImg = null, hist = [], last = null, stream = null, liveDets = [];
+
+// ---- engine setup
+async function initEngine() {
+ const chip = $("#modeChip"), ex = $("#engineExplain"), em = $("#engineMsg");
+ if (API_URL) { mode = "api"; chip.className = "chip ok"; chip.textContent = "Detection via your API"; ex.textContent = "Images are sent to your configured backend API for detection."; return; }
+ try {
+  if (!window.cocoSsd) throw 0;
+  model = await Promise.race([cocoSsd.load({base:"lite_mobilenet_v2"}), new Promise((_, r) => setTimeout(r, 20000))]);
+  mode = "local"; chip.className = "chip ok"; chip.textContent = "Local AI: COCO-SSD in your browser";
+  ex.textContent = "Detection runs locally in your browser with the COCO-SSD model. Images are not uploaded. This general model recognises phones, laptops, keyboards, TVs and some appliances. It cannot identify batteries, cables or circuit boards.";
+ } catch (e) {
+  mode = "demo"; chip.className = "chip demo"; chip.textContent = "Demo mode: no AI model loaded";
+  em.hidden = false; em.textContent = "Demo mode. No AI model could be loaded here, so nothing is being detected. You choose the item type and see the disposal report for it. Confidence is not shown because no real analysis happens.";
+  ex.textContent = "No AI model is connected right now, so the site runs in demo mode. To enable real detection, set API_URL in the script to a backend that wraps a trained e-waste model, or host the page where the COCO-SSD model files can load.";
+ }
+ icons();
+}
+
+// ---- utils
+function classify(l) { return MAP[l] || null; }
+function ts() { return new Date().toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"}); }
+function boxes(ctx, dets, sc) {
+ ctx.lineWidth = Math.max(3, 3 * sc); ctx.font = "700 " + Math.max(14, 15 * sc) + "px DM Sans, sans-serif";
+ dets.forEach(d => { const [x, y, w, h] = d.bbox; ctx.strokeStyle = "#e8772e"; ctx.strokeRect(x, y, w, h);
+  const t = d.label + " " + Math.round(d.score * 100) + "%", tw = ctx.measureText(t).width + 10, th = 24 * sc;
+  ctx.fillStyle = "#e8772e"; ctx.fillRect(x, Math.max(0, y - th), tw, th); ctx.fillStyle = "#1a0d02"; ctx.fillText(t, x + 5, Math.max(th - 7 * sc, y - 7 * sc)); });
+}
+async function detectSource(src, blob) {
+ if (mode === "local") { const r = await model.detect(src, 8, 0.4); return r.filter(r => classify(r.class)).map(r => ({label: classify(r.class)[1], cat: classify(r.class)[0], score: r.score, bbox: r.bbox})); }
+ if (mode === "api") { const fd = new FormData(); fd.append("image", blob); const res = await fetch(API_URL, {method:"POST", body: fd}); if (!res.ok) throw new Error("API " + res.status);
+  const j = await res.json(); return (j.detections || []).map(d => ({label: d.label, cat: d.category || "other", score: d.score, bbox: d.box || [0,0,0,0]})); }
+ return null;
+}
+
+// ---- tabs / nav
+function tab(w) { const u = w === "upload"; $("#tabU").setAttribute("aria-selected", u); $("#tabL").setAttribute("aria-selected", !u); $("#panU").hidden = !u; $("#panL").hidden = u; if (u) stopCam(); }
+$("#tabU").onclick = () => tab("upload"); $("#tabL").onclick = () => tab("live");
+document.querySelectorAll("[data-go]").forEach(a => a.addEventListener("click", () => tab(a.dataset.go)));
+$("#burger").onclick = e => { const o = $("#nav").classList.toggle("open"); e.currentTarget.setAttribute("aria-expanded", o); };
+$("#nav").onclick = e => { if (e.target.tagName === "A") $("#nav").classList.remove("open"); };
+
+// ---- upload
+const drop = $("#drop"), file = $("#file");
+function uErr(m) { const e = $("#uErr"); e.hidden = !m; e.textContent = m || ""; }
+function setFile(f) {
+ uErr("");
+ if (!f) return;
+ if (!/^image\/(jpeg|png|webp)$/.test(f.type)) return uErr("That file type isn't supported. Choose a JPG, JPEG, PNG or WEBP image.");
+ if (f.size > 10 * 1048576) return uErr("That image is over 10 MB. Choose a smaller one.");
+ curImg = f; const url = URL.createObjectURL(f); $("#prevImg").src = url;
+ $("#prev").hidden = false; $("#uRow").hidden = false; drop.hidden = true;
+}
+function clearFile() { curImg = null; file.value = ""; $("#prev").hidden = true; $("#uRow").hidden = true; drop.hidden = false; uErr(""); }
+$("#browse").onclick = e => { e.stopPropagation(); file.click(); }; $("#replaceBtn").onclick = () => file.click(); $("#removeBtn").onclick = clearFile;
+drop.onclick = () => file.click(); drop.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); file.click(); } };
+file.onchange = () => setFile(file.files[0]);
+["dragenter", "dragover"].forEach(v => drop.addEventListener(v, e => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave", "drop"].forEach(v => drop.addEventListener(v, e => { e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", e => setFile(e.dataTransfer.files[0]));
+$("#detectBtn").onclick = async () => {
+ const img = $("#prevImg"); if (!curImg) return;
+ $("#load").classList.add("on"); $("#detectBtn").disabled = true; uErr("");
+ try {
+  if (!img.complete) await img.decode();
+  const dets = await detectSource(img, curImg);
+  const c = document.createElement("canvas"); c.width = img.naturalWidth; c.height = img.naturalHeight; const x = c.getContext("2d"); x.drawImage(img, 0, 0);
+  if (dets) boxes(x, dets, c.width / 700);
+  show(dets, c, "upload");
+ } catch (e) { uErr("Detection failed. Try another image or try again in a moment."); }
+ $("#load").classList.remove("on"); $("#detectBtn").disabled = false;
+};
+
+// ---- live camera
+function lErr(m) { const e = $("#lErr"); e.hidden = !m; e.textContent = m || ""; }
+$("#startCam").onclick = async () => {
+ lErr("");
+ if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return lErr("This browser can't access a camera. Try a current version of Chrome, Edge, Safari or Firefox over HTTPS.");
+ try {
+  stream = await navigator.mediaDevices.getUserMedia({video: {facingMode: {ideal: "environment"}, width: {ideal: 1280}}, audio: false});
+  const v = $("#vid"); v.srcObject = stream; await v.play();
+  $("#liveBox").classList.add("on"); $("#liveEmpty").hidden = true; $("#startCam").disabled = true; $("#capBtn").disabled = false; $("#stopCam").disabled = false;
+  if (mode !== "local") lErr("Live boxes need the local AI model, which isn't available. You can still capture a frame" + (mode === "demo" ? " and preview a demo report." : "."));
+  loop();
+ } catch (e) {
+  const n = e && e.name;
+  lErr(n === "NotAllowedError" ? "Camera access was blocked. Allow the camera in your browser's site settings, or upload an image instead." : n === "NotFoundError" ? "No camera was found on this device. Upload an image instead." : n === "NotReadableError" ? "The camera is in use by another app. Close it and try again." : "The camera couldn't start. Upload an image instead.");
+ }
+};
+async function loop() {
+ const v = $("#vid"), o = $("#ov");
+ while (stream) {
+  if (v.videoWidth) {
+   if (o.width !== v.videoWidth) { o.width = v.videoWidth; o.height = v.videoHeight; $("#liveBox").style.aspectRatio = v.videoWidth + "/" + v.videoHeight; }
+   const x = o.getContext("2d"); x.clearRect(0, 0, o.width, o.height);
+   if (mode === "local") { try { const r = await model.detect(v, 6, 0.45); liveDets = r.filter(r => classify(r.class)).map(r => ({label: classify(r.class)[1], cat: classify(r.class)[0], score: r.score, bbox: r.bbox})); } catch (e) { liveDets = []; }
+    boxes(x, liveDets, o.width / 700);
+    $("#liveList").textContent = liveDets.length ? "Seen now: " + liveDets.map(d => d.label + " " + Math.round(d.score * 100) + "%").join(", ") : "Looking for electronic items…"; }
+  }
+  await new Promise(r => setTimeout(r, 200));
+ }
+}
+function stopCam() { if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; } $("#liveBox").classList.remove("on"); $("#liveEmpty").hidden = false; $("#startCam").disabled = false; $("#capBtn").disabled = true; $("#stopCam").disabled = true; $("#liveList").textContent = ""; liveDets = []; }
+$("#stopCam").onclick = stopCam;
+$("#capBtn").onclick = () => {
+ const v = $("#vid"), c = document.createElement("canvas"); c.width = v.videoWidth; c.height = v.videoHeight; const x = c.getContext("2d"); x.drawImage(v, 0, 0);
+ const d = mode === "demo" ? null : liveDets.slice(); if (d) boxes(x, d, c.width / 700); show(d, c, "live");
+};
+
+// ---- results
+function show(dets, canvas, source) {
+ const rc = $("#resCanvas"); rc.width = canvas.width; rc.height = canvas.height; rc.getContext("2d").drawImage(canvas, 0, 0);
+ const box = $("#resInfo"); $("#results").hidden = false;
+ if (dets === null) { // demo mode
+  box.innerHTML = '<span class="chip demo">Demo: not a real detection</span><h3 style="margin-top:12px">Choose the item type</h3><p>No model is running, so pick what this item is to preview its disposal report.</p><label for="demoSel" class="sr">Item type</label><select id="demoSel">' + Object.keys(INFO).map(k => '<option value="' + k + '">' + INFO[k].n + '</option>').join("") + '</select><div id="demoOut"></div>';
+  const upd = () => { const k = $("#demoSel").value; $("#demoOut").innerHTML = report(INFO[k].n, k, null, "Demo preview"); last = rec(INFO[k].n, k, null, "demo", rc); };
+  $("#demoSel").onchange = upd; upd();
+ } else if (!dets.length) {
+  box.innerHTML = '<span class="chip">No match</span><h3 style="margin-top:12px">No electronic items recognised</h3><p>Try a closer, well-lit photo with the item filling most of the frame.' + (mode === "local" ? " The local model can't identify batteries, cables or circuit boards." : "") + '</p>'; last = null;
+ } else {
+  const t = dets.slice().sort((a, b) => b.score - a.score)[0];
+  box.innerHTML = report(t.label, t.cat, t.score, "Detected") + (dets.length > 1 ? '<p style="margin-top:12px;color:var(--mute)">Also found: ' + dets.filter(d => d !== t).map(d => d.label + " (" + Math.round(d.score * 100) + "%)").join(", ") + '</p>' : "");
+  last = rec(t.label, t.cat, t.score, mode, rc);
+ }
+ if (last && dets !== null) addHist(last); else if (last) addHist(last, true);
+ icons(); $("#results").scrollIntoView({behavior: "smooth", block: "start"});
+}
+function report(name, cat, score, status) {
+ const i = INFO[cat] || INFO.other, p = score == null ? "" : Math.round(score * 1000) / 10;
+ return '<dl class="kv"><dt>Detected item</dt><dd>' + name + '</dd><dt>Category</dt><dd>' + i.n + '</dd><dt>Status</dt><dd>' + status + '</dd><dt>Confidence</dt><dd>' + (score == null ? "Not available in demo mode" : p + "%") + '</dd></dl>' +
+  (score == null ? "" : '<div class="bar2" style="margin:12px 0" role="img" aria-label="Confidence ' + p + ' percent"><i style="width:' + p + '%"></i></div>') +
+  '<h3 style="margin-top:18px">Recommended disposal</h3><p>' + i.how + '</p><h3>Recycling possibility</h3><p>' + i.rec + '</p><h3>Environmental impact</h3><p>' + i.imp + '</p>';
+}
+function rec(item, cat, score, src, c) {
+ const t = document.createElement("canvas"); t.width = 112; t.height = 112; t.getContext("2d").drawImage(c, 0, 0, c.width, c.height, 0, 0, 112, 112 * c.height / c.width);
+ return {time: ts(), item, category: INFO[cat].n, confidence: score == null ? null : Math.round(score * 1000) / 10, source: src === "demo" ? "demo (not AI)" : src === "api" ? "API" : "local AI", thumb: t.toDataURL("image/jpeg", .6)};
+}
+function addHist(r) { if (hist[0] && hist[0].time === r.time && hist[0].item === r.item) hist[0] = r; else hist.unshift(r); renderHist(); }
+function renderHist() {
+ $("#histEmpty").hidden = hist.length > 0;
+ $("#histList").innerHTML = hist.map(h => '<li><img src="' + h.thumb + '" alt=""><div><b>' + h.item + '</b><br><small>' + h.category + " · " + (h.confidence == null ? "no confidence" : h.confidence + "%") + " · " + h.source + " · " + h.time + '</small></div></li>').join("");
+}
+function exportData() { return JSON.stringify(hist.map(({thumb, ...r}) => r), null, 2); }
+$("#exportBtn").onclick = () => { $("#expTxt").value = exportData(); $("#dlg").showModal(); };
+$("#closeDlg").onclick = () => $("#dlg").close();
+$("#copyBtn").onclick = async () => { try { await navigator.clipboard.writeText($("#expTxt").value); $("#copyBtn").textContent = "Copied"; } catch (e) { $("#expTxt").select(); $("#copyBtn").textContent = "Press Ctrl+C to copy"; } };
+$("#resetBtn").onclick = () => { $("#results").hidden = true; last = null; clearFile(); stopCam(); hist = []; renderHist(); $("#detect").scrollIntoView({behavior: "smooth"}); };
+
+icons(); renderHist(); initEngine();
+</script>
+</body>
+</html>
